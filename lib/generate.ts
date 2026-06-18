@@ -355,6 +355,35 @@ function computeWarning(
   return { level, message, reasons };
 }
 
+function computeManagerAction(
+  status: string,
+  risk: RiskLevel,
+  signals: Set<string>,
+  highValue: boolean,
+): string {
+  if (risk === "critical") {
+    return "Review and approve the customer reply before it is sent, and decide whether to restrict sensitive account actions while the review completes.";
+  }
+  if (signals.has("fraud")) {
+    return "Confirm the escalation to Risk & Compliance and decide whether to freeze sensitive actions pending investigation.";
+  }
+  if (risk === "high") {
+    return "Review the drafted reply and the escalation checklist, then approve or adjust the response before the agent replies.";
+  }
+  if (signals.has("chargeback") || signals.has("legal")) {
+    return "Decide whether Risk & Compliance / the disputes process should take this over, and confirm the response approach with the agent.";
+  }
+  if (highValue) {
+    return "Authorize any refund, adjustment, or goodwill on this high-value case before the agent commits to it with the customer.";
+  }
+  return "Review the case, confirm the recommended status and assigned team, and advise the agent on the next step.";
+}
+
+/** Whether a case qualifies for the "Send Escalation Email" action. */
+export function isEscalatable(risk: RiskLevel, status: string): boolean {
+  return risk === "high" || risk === "critical" || status === "Escalated";
+}
+
 // ===========================================================================
 // Main entry point
 // ===========================================================================
@@ -425,5 +454,11 @@ export function generateOutput(form: CaseForm): GeneratedOutput {
     recommendedStatus,
     assignedTeam,
     warning,
+    managerAction: computeManagerAction(
+      recommendedStatus,
+      form.risk,
+      signals,
+      highValue,
+    ),
   };
 }

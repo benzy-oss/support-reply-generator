@@ -44,4 +44,6 @@ export interface GeneratedOutput {
   recommendedStatus: string;
   assignedTeam: string;
   warning: CaseWarning | null;
+  /** A single recommended action for the manager, used in escalation emails. */
+  managerAction: string;
 }

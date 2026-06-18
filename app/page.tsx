@@ -9,7 +9,7 @@ import {
   issueLabel,
 } from "@/lib/options";
 import { SAMPLE_CASES } from "@/lib/samples";
-import { generateOutput } from "@/lib/generate";
+import { generateOutput, isEscalatable } from "@/lib/generate";
 import {
   MAX_HISTORY,
   loadHistory,
@@ -408,6 +408,10 @@ function OutputView({
       <div className="space-y-5 p-5">
         {output.warning && <WarningBanner warning={output.warning} />}
 
+        {isEscalatable(form.risk, output.recommendedStatus) && (
+          <EscalationEmailButton form={form} output={output} />
+        )}
+
         <OutputCard title="Customer reply" copyText={output.customerReply}>
           <pre className="whitespace-pre-wrap font-sans text-[13px] leading-relaxed text-fg">
             {output.customerReply}
@@ -482,6 +486,89 @@ function OutputView({
           </SummaryTile>
         </div>
       </div>
+    </div>
+  );
+}
+
+function EscalationEmailButton({
+  form,
+  output,
+}: {
+  form: CaseForm;
+  output: GeneratedOutput;
+}) {
+  const [state, setState] = useState<"idle" | "sending" | "sent" | "error">(
+    "idle",
+  );
+  const [message, setMessage] = useState("");
+
+  async function send() {
+    setState("sending");
+    setMessage("");
+    try {
+      const res = await fetch("/api/send-escalation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caseId: form.caseId,
+          customerRef: form.customerRef,
+          issueType: issueLabel(form.issueType),
+          risk: form.risk,
+          assignedTeam: output.assignedTeam,
+          status: output.recommendedStatus,
+          internalNote: output.internalNote,
+          checklist: output.checklist.map((c) => ({
+            label: c.label,
+            flagged: !!c.flagged,
+          })),
+          managerAction: output.managerAction,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        setState("error");
+        setMessage(data?.error || "Could not send the email.");
+        return;
+      }
+      setState("sent");
+    } catch {
+      setState("error");
+      setMessage("Network error — please try again.");
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-gold-dim bg-[#1c1808] px-4 py-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[13px] font-semibold text-gold-soft">
+            Escalate to manager
+          </p>
+          <p className="mt-0.5 text-[11px] text-muted">
+            Sends an internal email to the support manager — never to the
+            customer.
+          </p>
+        </div>
+        <button
+          onClick={send}
+          disabled={state === "sending" || state === "sent"}
+          className="inline-flex flex-none items-center gap-2 rounded-md border border-gold-dim bg-gradient-to-b from-gold to-[#b88f3c] px-4 py-2 text-[13px] font-semibold text-ink transition-all hover:from-gold-soft hover:to-gold active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {state === "sending"
+            ? "Sending…"
+            : state === "sent"
+              ? "Sent ✓"
+              : "Send Escalation Email"}
+        </button>
+      </div>
+      {state === "sent" && (
+        <p className="mt-2.5 text-[12px] text-gold-soft">
+          ✓ Escalation email sent to the manager.
+        </p>
+      )}
+      {state === "error" && (
+        <p className="mt-2.5 text-[12px] text-[#d9988e]">{message}</p>
+      )}
     </div>
   );
 }
