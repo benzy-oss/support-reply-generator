@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background-color: theme("colors.ink");
+  color: theme("colors.fg");
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Subtle gold focus ring used across form controls */
+.field-focus {
+  @apply outline-none ring-0 transition-colors;
+}
+.field-focus:focus {
+  border-color: theme("colors.gold.DEFAULT");
+  box-shadow: 0 0 0 1px theme("colors.gold.dim");
+}
+
+/* Thin custom scrollbar for output panels */
+.scroll-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: #2c3037;
+  border-radius: 999px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Faint top hairline glow for the header */
+.header-line {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(201, 162, 75, 0.45),
+    transparent
+  );
+}
